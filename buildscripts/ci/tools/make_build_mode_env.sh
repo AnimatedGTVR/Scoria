@@ -36,6 +36,7 @@ if [ -z "$BUILD_MODE" ]; then
     if [ -z "$EVENT" ]; then echo "error: not set EVENT"; exit 1; fi
 
     if [ "$EVENT" == "pull_request" ]; then BUILD_MODE=devel; fi
+    if [ "$EVENT" == "push" ]; then BUILD_MODE=devel; fi  # Scoria: we build on push to our branch
     if [ "$EVENT" == "schedule" ]; then BUILD_MODE=nightly; fi
     if [ "$EVENT" == "workflow_dispatch" ]; then echo "error: event workflow_dispatch, but not set BUILD_MODE"; exit 1; fi
 fi
