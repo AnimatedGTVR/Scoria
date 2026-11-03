@@ -236,6 +236,8 @@ jobs:
         arch: ${{ matrix.qt-arch }}
         modules: 'qt5compat qtnetworkauth qtshadertools qtwebsockets'
         cache: true
+    - name: Apply Scoria patches
+      run: bash ./patches/apply.sh
     - name: Setup environment
       run: |
         bash ./buildscripts/ci/linux/setup.sh --arch ${{ matrix.arch }} --build-pipewire

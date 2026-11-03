@@ -1,0 +1,24 @@
+diff --git a/framework/audio/main/internal/audiodrivercontroller.cpp b/framework/audio/main/internal/audiodrivercontroller.cpp
+index fcd64565..90fa6b0c 100644
+--- a/framework/audio/main/internal/audiodrivercontroller.cpp
++++ b/framework/audio/main/internal/audiodrivercontroller.cpp
+@@ -249,6 +249,19 @@ void AudioDriverController::handleOutputDeviceChange()
+         return;
+     }
+ 
++    // Scoria: don't reopen a device that is still available. Closing and immediately reopening the
++    // same ALSA device deadlocks inside PipeWire's ALSA plugin (libasound_module_pcm_pipewire) on
++    // systems that route ALSA through PipeWire, freezing the app at startup with no window.
++    if (m_audioDriver->isOpened() && !m_retryOpenDevice) {
++        const AudioDeviceID currentId = m_audioDriver->activeSpec().deviceId;
++        for (const AudioDevice& device : m_audioDriver->availableOutputDevices()) {
++            if (device.id == currentId) {
++                LOGI() << "Output device still available, no reopen needed: " << currentId;
++                return;
++            }
++        }
++    }
++
+     // Some drivers reset their internal spec to a blank state after a failed open attempt, so fall
+     // back to the last spec that was actually confirmed to work
+     IAudioDriver::Spec spec = m_audioDriver->activeSpec();

@@ -99,6 +99,7 @@ deps)
     ;;
 build)
     [ -d "$QT_DIR" ] || { echo "Qt not found at $QT_DIR"; exit 1; }
+    bash patches/apply.sh
     cmake -S . -B "$BUILD" -G Ninja \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_PREFIX_PATH="$QT_DIR" \
