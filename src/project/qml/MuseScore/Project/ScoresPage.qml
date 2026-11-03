@@ -85,20 +85,6 @@ FocusScope {
         color: ui.theme.backgroundSecondaryColor
     }
 
-    // Scoria: soft ocean glow behind the greeting
-    Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 220
-
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: Qt.alpha(ui.theme.accentColor, 0.22) }
-            GradientStop { position: 0.6; color: Qt.alpha(ui.theme.focusColor, 0.06) }
-            GradientStop { position: 1.0; color: "transparent" }
-        }
-    }
-
     RowLayout {
         id: topLayout
 
@@ -120,33 +106,13 @@ FocusScope {
             accessible.name: qsTrc("project", "Scores")
         }
 
-        ColumnLayout {
+        StyledTextLabel {
+            id: pageTitle
             Layout.fillWidth: true
-            spacing: 6
 
-            StyledTextLabel {
-                id: pageTitle
-                Layout.fillWidth: true
-
-                readonly property int hour: new Date().getHours()
-
-                text: hour < 5 ? qsTrc("project", "Late night session?")
-                               : hour < 12 ? qsTrc("project", "Good morning")
-                                           : hour < 18 ? qsTrc("project", "Good afternoon")
-                                                       : qsTrc("project", "Good evening")
-                font.pixelSize: 30
-                font.bold: true
-                horizontalAlignment: Text.AlignLeft
-            }
-
-            StyledTextLabel {
-                Layout.fillWidth: true
-
-                text: qsTrc("project", "Pick up where you left off, or start something new.")
-                font: ui.theme.largeBodyFont
-                opacity: 0.75
-                horizontalAlignment: Text.AlignLeft
-            }
+            text: qsTrc("project", "Scores")
+            font: ui.theme.titleBoldFont
+            horizontalAlignment: Text.AlignLeft
         }
 
         SearchField {

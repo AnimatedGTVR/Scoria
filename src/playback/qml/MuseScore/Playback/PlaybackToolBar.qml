@@ -54,14 +54,10 @@ Item {
         thePlaybackModel.load()
     }
 
-    // Scoria: a Grid so the docked toolbar can grow sideways (seek + speed chips)
-    // while the floating toolbar keeps stacking vertically as before.
-    Grid {
+    Column {
         id: content
 
-        columns: root.floating ? 1 : 3
         spacing: 8
-        verticalItemAlignment: Grid.AlignVCenter
 
         width: childrenRect.width
 
@@ -109,59 +105,6 @@ Item {
 
                     navigationPanel: navPanel
                     navigationOrderStart: playPositionSlider.navigation.order + 1
-                }
-            }
-        }
-
-        // Scoria: docked extras (upstream only shows seek/speed when floating)
-        Loader {
-            active: !root.floating
-            visible: active
-
-            sourceComponent: Row {
-                spacing: 6
-
-                StyledSlider {
-                    id: dockedSeek
-
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 160
-
-                    value: thePlaybackModel.playPosition
-                    stepSize: 0.01
-
-                    navigation.panel: navPanel
-                    navigation.order: playbackActions.navigationOrderEnd + 1
-                    navigation.accessible.name: qsTrc("playback", "Playback position")
-
-                    onMoved: {
-                        thePlaybackModel.playPosition = value
-                    }
-                }
-
-                Repeater {
-                    model: [0.5, 0.75, 1.0, 1.25]
-
-                    FlatButton {
-                        required property real modelData
-                        required property int index
-
-                        anchors.verticalCenter: parent.verticalCenter
-                        minWidth: 40
-                        height: 26
-
-                        text: Math.round(modelData * 100) + "%"
-                        accentButton: Math.abs(thePlaybackModel.tempoMultiplier - modelData) < 0.001
-                        transparent: !accentButton
-
-                        navigation.panel: navPanel
-                        navigation.order: dockedSeek.navigation.order + 1 + index
-                        toolTipTitle: qsTrc("playback", "Playback speed %1").arg(text)
-
-                        onClicked: {
-                            thePlaybackModel.tempoMultiplier = modelData
-                        }
-                    }
                 }
             }
         }
