@@ -2,8 +2,6 @@ name: 'Build: Linux'
 
 on:
   pull_request:
-  push:
-    branches: [scoria]   # Scoria: build an AppImage on every push to our branch
   workflow_dispatch:
     inputs:
       platforms:

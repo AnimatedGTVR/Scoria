@@ -61,57 +61,10 @@ Item {
 
         spacing: 0
 
-        // Scoria brand header
-        Item {
-            id: brand
-
-            Layout.fillWidth: true
-            Layout.preferredHeight: 56
-            Layout.topMargin: 20
-
-            Rectangle {
-                id: brandBadge
-
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.left
-                anchors.leftMargin: root.iconsOnly ? (brand.width - width) / 2 : 24
-
-                width: 36
-                height: 36
-                radius: 10
-
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: ui.theme.accentColor }
-                    GradientStop { position: 1.0; color: ui.theme.focusColor }
-                }
-
-                StyledTextLabel {
-                    anchors.centerIn: parent
-                    text: "S"
-                    font.pixelSize: 20
-                    font.bold: true
-                    color: "#FFFFFF"
-                }
-            }
-
-            StyledTextLabel {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: brandBadge.right
-                anchors.leftMargin: 12
-
-                visible: !root.iconsOnly
-                text: "Scoria"
-                font.pixelSize: 24
-                font.bold: true
-                font.letterSpacing: 0.5
-            }
-        }
-
         AccountInfoButton {
             Layout.fillWidth: true
             Layout.preferredHeight: 60
-            Layout.topMargin: 8
+            Layout.topMargin: 20
 
             navigation.name: "AccountInfo"
             navigation.panel: navPanel
