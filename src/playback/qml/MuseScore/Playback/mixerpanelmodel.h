@@ -36,6 +36,7 @@
 #include "ui/qml/Muse/Ui/navigationsection.h"
 
 #include "iplaybackcontroller.h"
+#include "iaudiofiletracks.h"
 #include "mixerchannelitem.h"
 
 namespace mu::playback {
@@ -55,6 +56,7 @@ class MixerPanelModel : public QAbstractListModel, public QQmlParserStatus, publ
     muse::GlobalInject<IPlaybackConfiguration> configuration;
     muse::ContextInject<muse::audio::IPlayback> playback = { this };
     muse::ContextInject<IPlaybackController> controller = { this };
+    muse::ContextInject<IAudioFileTracks> audioFileTracks = { this }; // Scoria
     muse::ContextInject<project::IProjectSession> context = { this };
 
 public:
@@ -104,6 +106,7 @@ private:
                                                  bool isPrimary = true);
     MixerChannelItem* buildAuxChannelItem(muse::audio::aux_channel_idx_t index, const muse::audio::TrackId trackId);
     MixerChannelItem* buildMasterChannelItem();
+    MixerChannelItem* buildAudioFileChannelItem(const muse::audio::TrackId trackId); // Scoria
 
     int masterChannelIndex() const;
 

@@ -89,6 +89,7 @@ public:
         Metronome,
         Aux,
         Master,
+        AudioFile, // Scoria: MP3/WAV/FLAC track
     };
     Q_ENUM(Type)
 

@@ -152,6 +152,7 @@ void MixerPanelContextMenuModel::load()
     viewMenuItems.push_back(buildSectionVisibleItem(MixerSectionType::Title));
 
     MenuItemList items {
+        makeMenuItem(ADD_AUDIO_TRACK_COMMAND), // Scoria
         makeMenuItem(OPEN_PLAYBACK_SETUP_COMMAND),
         makeMenu(TranslatableString("playback", "View"), viewMenuItems, VIEW_MENU_ID)
     };

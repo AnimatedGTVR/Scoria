@@ -50,6 +50,8 @@ MixerPanelSection {
                 return "#63D47B"
             case MixerChannelItem.Master:
                 return "#F87BDC"
+            case MixerChannelItem.AudioFile: // Scoria
+                return "#FBBF24"
             }
 
             return ui.theme.accentColor

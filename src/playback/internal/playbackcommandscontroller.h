@@ -36,6 +36,7 @@
 #include "interactive/iinteractive.h"
 #include "../iplaybackcontroller.h"
 #include "../iplaybackconfiguration.h"
+#include "../iaudiofiletracks.h"
 
 namespace mu::playback {
 class PlaybackCommandsController : public IPlaybackCommandsController, public muse::Contextable, public muse::rcommand::Commandable
@@ -44,6 +45,7 @@ class PlaybackCommandsController : public IPlaybackCommandsController, public mu
     muse::ContextInject<muse::rcommand::ICommandDispatcher> dispatcher = { this };
     muse::ContextInject<muse::rcommand::ICommandsState> commandsState = { this };
     muse::ContextInject<IPlaybackController> playbackController = { this };
+    muse::ContextInject<IAudioFileTracks> audioFileTracks = { this }; // Scoria
     muse::ContextInject<muse::IInteractive> interactive = { this };
 public:
     PlaybackCommandsController(const muse::modularity::ContextPtr& ctx)

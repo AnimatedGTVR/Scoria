@@ -328,6 +328,8 @@ MenuItem* AppMenuModel::makeAddMenu()
         makeMenu(TranslatableString("appshell/menu/add", "&Lines"), makeLinesItems(), "menu-lines"),
         makeMenu(TranslatableString("appshell/menu/add", "&Chords and fretboard diagrams"),
                  makeChordAndFretboardDiagramsItems(), "menu-chord-and-frets"),
+        makeSeparator(),
+        makeMenuItem(ADD_AUDIO_TRACK_COMMAND), // Scoria
     };
 
     return makeMenu(TranslatableString("appshell/menu/add", "&Add"), addItems, "menu-add");

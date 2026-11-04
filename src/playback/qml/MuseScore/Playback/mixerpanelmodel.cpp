@@ -70,6 +70,18 @@ void MixerPanelModel::init()
         removeItem(trackId);
     });
 
+    // Scoria: audio file tracks get a channel just before the master channel
+    audioFileTracks()->trackAdded().onReceive(this, [this](const TrackId trackId) {
+        if (findChannelItem(trackId) || m_mixerChannelList.isEmpty()) {
+            return; // already shown, or the mixer isn't loaded yet (reload will pick it up)
+        }
+        addItem(buildAudioFileChannelItem(trackId), masterChannelIndex());
+    });
+
+    audioFileTracks()->trackRemoved().onReceive(this, [this](const TrackId trackId) {
+        removeItem(trackId);
+    });
+
     reload();
 }
 
@@ -169,6 +181,10 @@ void MixerPanelModel::reloadItems()
         if (configuration()->isAuxChannelVisible(it->first)) {
             m_mixerChannelList.push_back(buildAuxChannelItem(it->first, it->second));
         }
+    }
+
+    for (const auto& [trackId, track] : audioFileTracks()->tracks()) { // Scoria
+        m_mixerChannelList.push_back(buildAudioFileChannelItem(trackId));
     }
 
     m_masterChannelItem = buildMasterChannelItem();
@@ -539,6 +555,44 @@ MixerChannelItem* MixerPanelModel::buildInstrumentChannelItem(const TrackId trac
     connect(item, &MixerChannelItem::soloMuteStateChanged, this,
             [this, instrumentTrackId](const notation::INotationSoloMuteState::SoloMuteState& state) {
         controller()->setTrackSoloMuteState(instrumentTrackId, state);
+    });
+
+    return item;
+}
+
+MixerChannelItem* MixerPanelModel::buildAudioFileChannelItem(const TrackId trackId)
+{
+    // Scoria: a plain output channel (volume, pan, FX, meters, mute) for an MP3/WAV/FLAC track
+    MixerChannelItem* item = new MixerChannelItem(this, MixerChannelItem::Type::AudioFile, true /*outputOnly*/, trackId);
+    item->setPanelSection(m_navigationSection);
+
+    const auto& tracks = audioFileTracks()->tracks();
+    auto it = tracks.find(trackId);
+    item->setTitle(it != tracks.end() ? QString::fromStdString(it->second.name) : QString());
+
+    loadOutputParams(item, AudioOutputParams());
+
+    playback()->signalChanges(trackId)
+    .onResolve(this, [this, trackId](AudioSignalChanges signalChanges) {
+        if (MixerChannelItem* item = findChannelItem(trackId)) {
+            item->subscribeOnAudioSignalChanges(signalChanges);
+        }
+    });
+
+    connect(item, &MixerChannelItem::controlParamsChanged, this, [this, trackId](const AudioOutputParams& params) {
+        playback()->setControlParams(trackId, params.control());
+    });
+    connect(item, &MixerChannelItem::fxChainParamsChanged, this, [this, trackId](const AudioOutputParams& params) {
+        playback()->setFxChainParams(trackId, params.fxChain);
+    });
+    connect(item, &MixerChannelItem::auxSendsParamsChanged, this, [this, trackId](const AudioOutputParams& params) {
+        playback()->setAuxSendsParams(trackId, params.auxSends);
+    });
+    connect(item, &MixerChannelItem::soloMuteStateChanged, this,
+            [this, trackId, item](const notation::INotationSoloMuteState::SoloMuteState& state) {
+        ControlParams control = item->outputParams().control();
+        control.muted = state.mute;
+        playback()->setControlParams(trackId, control);
     });
 
     return item;

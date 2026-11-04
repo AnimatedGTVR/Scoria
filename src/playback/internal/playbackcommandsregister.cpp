@@ -109,6 +109,13 @@ static const std::vector<CommandInfo> s_commandInfos = {
         Decoration(IconCode::Code::METRONOME, rcommand::Checkable::Yes)
     },
     CommandInfo{
+        ADD_AUDIO_TRACK_COMMAND,
+        TranslatableString("playback", "Audio track…"),
+        TranslatableString("playback", "Add an MP3, WAV or FLAC track that plays along with the score"),
+        InputSchema(),
+        Decoration(IconCode::Code::NONE)
+    },
+    CommandInfo{
         OPEN_PLAYBACK_SETUP_COMMAND,
         TranslatableString("playback", "Playback setup"),
         TranslatableString("playback", "Show playback setup"),

@@ -28,12 +28,15 @@ target_sources(playback PRIVATE
     isoundprofilesrepository.h
     playbacktypes.h
     playbackcommands.h
+    iaudiofiletracks.h
 
     internal/iplaybackcommandscontroller.h
     internal/playbackcommandscontroller.cpp
     internal/playbackcommandscontroller.h
     internal/playbackcontroller.cpp
     internal/playbackcontroller.h
+    internal/audiofiletracks.cpp
+    internal/audiofiletracks.h
     internal/onlinesoundscontroller.cpp
     internal/onlinesoundscontroller.h
     internal/playbackcommandsregister.cpp
