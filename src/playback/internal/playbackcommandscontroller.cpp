@@ -57,6 +57,10 @@ void PlaybackCommandsController::init()
     registerCommand(COUNTIN_TOGGLE_COMMAND, &IPlaybackController::toggleCountIn);
     registerCommand(OPEN_PLAYBACK_SETUP_COMMAND, [this]() { return showPlaybackSetup(); });
     registerCommand(ADD_AUDIO_TRACK_COMMAND, [this]() { return audioFileTracks()->addTrackInteractive(); });
+    registerCommand(OPEN_AUDIO_TRACKS_COMMAND, [this]() {
+        interactive()->open("musescore://playback/audiotracks");
+        return make_ok();
+    });
     registerCommand(REMOVE_AUDIO_TRACK_COMMAND, [this](const rcommand::Params& params) {
         if (!params.contains("track-id")) {
             return make_ret(Ret::Code::BadArgs);

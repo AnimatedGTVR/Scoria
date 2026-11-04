@@ -923,6 +923,7 @@ void SingleLayout::layout(Clef* item, const Context& ctx)
         break;
     case ClefType::PERC:        // percussion clefs
     case ClefType::PERC2:
+    case ClefType::AUDIO:       // Scoria
         yoff = lineDist * (lines - 1) * 0.5;
         break;
     default:

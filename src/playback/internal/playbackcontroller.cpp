@@ -47,6 +47,7 @@
 #include "project/inotationproject.h"
 
 #include "../playbacktypes.h"
+#include "../scoriaaudiotrack.h"
 #include "onlinesoundscontroller.h"
 
 using namespace muse;
@@ -1186,21 +1187,14 @@ void PlaybackController::addTrack(const InstrumentTrackId& instrumentTrackId, bo
 }
 
 // Scoria: "Audio Track" instrument ------------------------------------------------------------
-static const std::string SCORIA_AUDIO_PREFIX = "scoria-audio:";
-static const muse::String SCORIA_AUDIO_INSTRUMENT_ID = u"scoria-audio-track";
-
 bool PlaybackController::isScoriaAudioTrack(const InstrumentTrackId& instrumentTrackId)
 {
-    return instrumentTrackId.instrumentId == SCORIA_AUDIO_INSTRUMENT_ID;
+    return scoria::isAudioTrack(instrumentTrackId);
 }
 
 AudioInputParams PlaybackController::scoriaAudioParams(const std::string& filePath)
 {
-    AudioInputParams params;
-    params.resourceMeta.id = SCORIA_AUDIO_PREFIX + filePath;
-    params.resourceMeta.vendor = "Scoria";
-    params.resourceMeta.type = std::string(muse::audio::FLUID_SOUNDFONT_TYPE_NAME);
-    return params;
+    return scoria::makeParams(filePath);
 }
 
 void PlaybackController::askForScoriaAudioFile(const InstrumentTrackId& instrumentTrackId, TrackId trackId)
@@ -1213,11 +1207,17 @@ void PlaybackController::askForScoriaAudioFile(const InstrumentTrackId& instrume
     interactive()->selectOpeningFile(muse::trc("playback", "Choose the audio file for this Audio Track"), "", filter)
     .onResolve(this, [this, instrumentTrackId, trackId](const muse::io::path_t& path) {
         if (path.empty()) {
-            return; // stays silent; the user can add the instrument again
+            return; // stays as is; the file can be chosen later in Mixer > Audio tracks…
         }
-        AudioInputParams params = scoriaAudioParams(path.toStdString());
+        AudioInputParams params = scoria::makeParams(path.toStdString());
         playback()->setSourceParams(trackId, params);
         audioSettings()->setTrackInputParams(instrumentTrackId, params);
+
+        // Name the staff after the song
+        if (masterNotationParts()) {
+            const InstrumentKey key { instrumentTrackId.instrumentId, instrumentTrackId.partId, Part::MAIN_INSTRUMENT_TICK };
+            masterNotationParts()->setInstrumentName(key, muse::io::completeBasename(path).toQString());
+        }
     });
 }
 // ---------------------------------------------------------------------------------------------
@@ -1247,7 +1247,7 @@ void PlaybackController::doAddTrack(const InstrumentTrackId& instrumentTrackId, 
     // Scoria: the Audio Track instrument always uses the audio-file sound (silent until a file is chosen)
     bool needsScoriaAudioFile = false;
     if (isScoriaAudioTrack(instrumentTrackId)
-        && inParams.resourceMeta.id.rfind(SCORIA_AUDIO_PREFIX, 0) != 0) {
+        && !scoria::isAudioResource(inParams)) {
         inParams = scoriaAudioParams("");
         needsScoriaAudioFile = true;
     }

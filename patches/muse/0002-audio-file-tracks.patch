@@ -472,10 +472,10 @@ index 00000000..3a1c11a8
 +}
 diff --git a/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp
 new file mode 100644
-index 00000000..c6e2c4d0
+index 00000000..1b55a052
 --- /dev/null
 +++ b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp
-@@ -0,0 +1,240 @@
+@@ -0,0 +1,279 @@
 +/*
 + * SPDX-License-Identifier: GPL-3.0-only
 + * Scoria: "Audio Track" instrument sound
@@ -490,6 +490,8 @@ index 00000000..c6e2c4d0
 +#include <cmath>
 +#include <cstring>
 +
++#include <map>
++
 +#include "global/io/file.h"
 +#include "mpe/automationpoint.h"
 +#include "log.h"
@@ -500,6 +502,38 @@ index 00000000..c6e2c4d0
 +
 +namespace {
 +constexpr double FADE_SECS = 0.008; // short fade at note edges so starts/stops don't click
++
++//! Decoded files are shared and kept while any synth uses them, so changing the offset/gain
++//! (which re-creates the synth) doesn't decode the whole MP3 again
++std::shared_ptr<const engine::DecodedAudio> loadDecoded(const std::string& path)
++{
++    static std::mutex mutex;
++    static std::map<std::string, std::weak_ptr<const engine::DecodedAudio> > cache;
++
++    std::lock_guard lock(mutex);
++    if (auto cached = cache[path].lock()) {
++        return cached;
++    }
++
++    auto decoded = std::make_shared<engine::DecodedAudio>();
++    ByteArray data;
++    if (!path.empty() && io::File::readFile(io::path_t(path), data) && !data.empty()) {
++        *decoded = engine::decodeAudioFile(data);
++    }
++    cache[path] = decoded;
++    return decoded;
++}
++
++double attributeDouble(const AudioInputParams& params, const char16_t* key, double fallback)
++{
++    const String& v = params.resourceMeta.attributeVal(String(key));
++    if (v.empty()) {
++        return fallback;
++    }
++    bool ok = false;
++    const double d = v.toDouble(&ok);
++    return ok ? d : fallback;
++}
 +
 +float levelToGain(mpe::dynamic_level_t level)
 +{
@@ -521,14 +555,13 @@ index 00000000..c6e2c4d0
 +{
 +    const std::string path = params.resourceMeta.id.substr(std::strlen(RESOURCE_PREFIX));
 +
-+    ByteArray data;
-+    if (io::File::readFile(io::path_t(path), data) && !data.empty()) {
-+        m_audio = engine::decodeAudioFile(data);
-+    }
-+
-+    if (!m_audio.isValid()) {
++    m_audio = loadDecoded(path);
++    if (!path.empty() && !m_audio->isValid()) {
 +        LOGE() << "Scoria: can't load audio for Audio Track instrument: " << path;
 +    }
++
++    m_offsetSecs = attributeDouble(params, OFFSET_ATTRIBUTE, 0.0);
++    m_trimGain = static_cast<float>(std::pow(10.0, std::clamp(attributeDouble(params, GAIN_ATTRIBUTE, 0.0), -60.0, 24.0) / 20.0));
 +
 +    m_timeline = std::make_shared<Timeline>();
 +}
@@ -545,7 +578,7 @@ index 00000000..c6e2c4d0
 +
 +bool AudioFileSynth::isValid() const
 +{
-+    return m_audio.isValid();
++    return m_audio && m_audio->isValid();
 +}
 +
 +void AudioFileSynth::setOutputSpec(const OutputSpec& spec)
@@ -620,6 +653,11 @@ index 00000000..c6e2c4d0
 +            break; // nothing sane lasts 10 minutes, stop scanning back
 +        }
 +    }
++    if (tl.gates.empty()) {
++        // An empty Audio Track staff plays the whole song; once there are notes, rests mean silence
++        static const Gate always;
++        active = &always;
++    }
 +    if (!active) {
 +        return 0.0f;
 +    }
@@ -659,7 +697,7 @@ index 00000000..c6e2c4d0
 +    }
 +
 +    const bool playing = m_mode == ProcessMode::Playing || m_mode == ProcessMode::PlayingOffline;
-+    if (!playing || !m_audio.isValid()) {
++    if (!playing || !isValid()) {
 +        std::fill(buffer, buffer + samplesPerChannel * outCh, 0.0f);
 +        return samplesPerChannel;
 +    }
@@ -671,14 +709,15 @@ index 00000000..c6e2c4d0
 +    }
 +
 +    const double outRate = m_outputSpec.sampleRate;
-+    const double step = static_cast<double>(m_audio.sampleRate) / outRate;
++    const engine::DecodedAudio& audio = *m_audio;
++    const double step = static_cast<double>(audio.sampleRate) / outRate;
 +    const float fadeStep = static_cast<float>(1.0 / (FADE_SECS * outRate));
-+    const std::vector<float>& s = m_audio.samples;
-+    const uint64_t frames = m_audio.frames;
++    const std::vector<float>& s = audio.samples;
++    const uint64_t frames = audio.frames;
 +
 +    // The gate/dynamics target is evaluated every 64 samples (~1.5 ms); the gain ramps toward it
 +    float target = 0.0f;
-+    double src = m_positionSecs * m_audio.sampleRate;
++    double src = (m_positionSecs + m_offsetSecs) * audio.sampleRate;
 +
 +    for (samples_t i = 0; i < samplesPerChannel; ++i, src += step) {
 +        if ((i & 63) == 0) {
@@ -698,8 +737,8 @@ index 00000000..c6e2c4d0
 +            if (i0 + 1 < frames) {
 +                const float frac = static_cast<float>(src - static_cast<double>(i0));
 +                const float* a = &s[i0 * 2];
-+                l = (a[0] + (a[2] - a[0]) * frac) * m_currentGain;
-+                r = (a[1] + (a[3] - a[1]) * frac) * m_currentGain;
++                l = (a[0] + (a[2] - a[0]) * frac) * m_currentGain * m_trimGain;
++                r = (a[1] + (a[3] - a[1]) * frac) * m_currentGain * m_trimGain;
 +            }
 +        }
 +
@@ -718,10 +757,10 @@ index 00000000..c6e2c4d0
 +}
 diff --git a/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.h b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.h
 new file mode 100644
-index 00000000..fc0acbb1
+index 00000000..0c91a5de
 --- /dev/null
 +++ b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.h
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,84 @@
 +/*
 + * SPDX-License-Identifier: GPL-3.0-only
 + * Scoria: "Audio Track" instrument sound
@@ -751,6 +790,10 @@ index 00000000..fc0acbb1
 +public:
 +    //! Sound ids look like "scoria-audio:/path/to/song.mp3"
 +    static constexpr const char* RESOURCE_PREFIX = "scoria-audio:";
++    //! Editing, stored as attributes of the sound so they save with the score:
++    //! offset = which second of the file lines up with the start of the score (negative delays it), gain = dB trim
++    static constexpr const char16_t* OFFSET_ATTRIBUTE = u"scoriaOffset";
++    static constexpr const char16_t* GAIN_ATTRIBUTE = u"scoriaGain";
 +    static bool isAudioFileResource(const AudioInputParams& params);
 +
 +    AudioFileSynth(const AudioInputParams& params);
@@ -789,7 +832,9 @@ index 00000000..fc0acbb1
 +    void rebuildTimeline(const mpe::PlaybackEventsMap& events, const mpe::DynamicAutomationLayers& dynamics);
 +    float targetGainAt(const Timeline& tl, int64_t posUs) const;
 +
-+    engine::DecodedAudio m_audio;
++    std::shared_ptr<const engine::DecodedAudio> m_audio;
++    double m_offsetSecs = 0.0;
++    float m_trimGain = 1.0f;
 +    OutputSpec m_outputSpec;
 +    mpe::PlaybackData m_playbackData;
 +

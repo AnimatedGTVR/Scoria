@@ -90,6 +90,8 @@ const ClefInfo ClefInfo::clefTable[] = {
 
     { ClefType::C4_8VB,  4, 30, { 6, 2, 5, 1, 4, 0, 3, 3, 0, 4, 1, 5, 2, 6 },  SymId::cClef8vb,         StaffGroup::STANDARD },
     { ClefType::G8_VB_C, 2, 38, { 0, 3, -1, 2, 5, 1, 4, 4, 1, 5, 2, 6, 3, 7 }, SymId::gClef8vbCClef,    StaffGroup::STANDARD },
+    // Scoria
+    { ClefType::AUDIO,   2, 45, { 0, 3, -1, 2, 5, 1, 4, 4, 1, 5, 2, 6, 3, 7 }, SymId::elecAudioStereo,  StaffGroup::PERCUSSION },
 };
 
 //---------------------------------------------------------

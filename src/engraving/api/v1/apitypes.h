@@ -1115,6 +1115,7 @@ enum class ClefType {
     TAB4_SERIF = int(mu::engraving::ClefType::TAB4_SERIF),
     C4_8VB     = int(mu::engraving::ClefType::C4_8VB),
     G8_VB_C    = int(mu::engraving::ClefType::G8_VB_C),
+    AUDIO      = int(mu::engraving::ClefType::AUDIO), // Scoria
     MAX        = int(mu::engraving::ClefType::MAX),
 };
 Q_ENUM_NS(ClefType);

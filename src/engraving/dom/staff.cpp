@@ -412,7 +412,8 @@ ClefTypeList Staff::clefType(const Fraction& tick) const
             ct = defaultClefType();
             break;
         case StaffGroup::PERCUSSION:
-            ct = ClefTypeList(ClefType::PERC);
+            // Scoria: the Audio Track instrument gets its own clef
+            ct = ClefTypeList(originPart(tick)->instrument(tick)->id() == u"scoria-audio-track" ? ClefType::AUDIO : ClefType::PERC);
             break;
         }
     }

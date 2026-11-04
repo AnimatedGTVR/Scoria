@@ -16726,7 +16726,7 @@
                   <longName>Audio Track</longName>
                   <shortName>Audio</shortName>
                   <description>Plays an MP3, WAV or FLAC file along with the score. Write notes where it should play and rests where it should be silent; dynamics set its volume.</description>
-                  <clef>PERC</clef>
+                  <clef>AUDIO</clef>
                   <stafftype staffTypePreset="perc1Line">percussion</stafftype>
                   <barlineSpan>1</barlineSpan>
                   <drumset>1</drumset>

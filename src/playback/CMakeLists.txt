@@ -29,6 +29,7 @@ target_sources(playback PRIVATE
     playbacktypes.h
     playbackcommands.h
     iaudiofiletracks.h
+    scoriaaudiotrack.h
 
     internal/iplaybackcommandscontroller.h
     internal/playbackcommandscontroller.cpp

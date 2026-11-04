@@ -1838,6 +1838,7 @@ void TLayout::layoutClef(const Clef* item, Clef::LayoutData* ldata, const Layout
         break;
     case ClefType::PERC:                                   // percussion clefs
     case ClefType::PERC2:
+    case ClefType::AUDIO:                                  // Scoria
         yoff = lineDist * (lines - 1) * 0.5;
         stepOffset = 0;
         break;
