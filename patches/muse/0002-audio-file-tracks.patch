@@ -472,7 +472,7 @@ index 00000000..3a1c11a8
 +}
 diff --git a/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp
 new file mode 100644
-index 00000000..ab03168a
+index 00000000..c6e2c4d0
 --- /dev/null
 +++ b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp
 @@ -0,0 +1,240 @@
@@ -590,8 +590,8 @@ index 00000000..ab03168a
 +            }
 +            const mpe::ArrangementContext& ac = note->arrangementCtx();
 +            Gate g;
-+            g.startUs = ac.actualTimestamp.raw();
-+            g.endUs = g.startUs + ac.actualDuration.raw();
++            g.startUs = static_cast<int64_t>(ac.actualTimestamp);
++            g.endUs = g.startUs + static_cast<int64_t>(ac.actualDuration);
 +            g.noteLevel = levelToGain(note->expressionCtx().nominalDynamicLevel);
 +            if (g.endUs > g.startUs) {
 +                tl->gates.push_back(g);
