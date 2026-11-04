@@ -82,7 +82,7 @@ void AudioFileTracks::doAddTrack(const io::path_t& path, bool remember)
     Ret readRet = io::File::readFile(path, data);
     if (!readRet || data.empty()) {
         LOGE() << "Scoria: can't read audio file: " << path;
-        interactive()->error(muse::trc("playback", "Can't add audio track"),
+        interactive()->error(muse::trc("playback", "Can’t add audio track"),
                              muse::qtrc("playback", "Could not read “%1”.").arg(path.toQString()).toStdString());
         return;
     }
@@ -104,8 +104,8 @@ void AudioFileTracks::doAddTrack(const io::path_t& path, bool remember)
     })
     .onReject(this, [this, path, buffer](int code, const std::string& msg) {
         LOGE() << "Scoria: can't add audio track " << path << ", code: " << code << " " << msg;
-        interactive()->error(muse::trc("playback", "Can't add audio track"),
-                             muse::qtrc("playback", "“%1” isn't a supported audio file. Scoria can play MP3, WAV and FLAC.")
+        interactive()->error(muse::trc("playback", "Can’t add audio track"),
+                             muse::qtrc("playback", "“%1” isn’t a supported audio file. Scoria can play MP3, WAV and FLAC.")
                              .arg(io::filename(path).toQString()).toStdString());
     });
 }
