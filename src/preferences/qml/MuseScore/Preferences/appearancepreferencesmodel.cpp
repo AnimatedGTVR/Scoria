@@ -117,7 +117,9 @@ QStringList AppearancePreferencesModel::generalThemeCodes() const
 {
     return {
         QString::fromStdString(LIGHT_THEME_CODE),
-        QString::fromStdString(DARK_THEME_CODE)
+        QString::fromStdString(DARK_THEME_CODE),
+        QString::fromStdString(MIDNIGHT_THEME_CODE), // Scoria
+        QString::fromStdString(EMBER_THEME_CODE)
     };
 }
 
@@ -134,7 +136,8 @@ QVariantList AppearancePreferencesModel::generalThemes() const
     QVariantList result;
 
     for (const ThemeInfo& theme: allThemes()) {
-        if (theme.codeKey == LIGHT_THEME_CODE || theme.codeKey == DARK_THEME_CODE) {
+        if (theme.codeKey == LIGHT_THEME_CODE || theme.codeKey == DARK_THEME_CODE
+            || theme.codeKey == MIDNIGHT_THEME_CODE || theme.codeKey == EMBER_THEME_CODE) { // Scoria
             result << ThemeConverter::toMap(theme);
         }
     }

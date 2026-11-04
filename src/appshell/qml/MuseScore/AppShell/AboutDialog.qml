@@ -31,7 +31,7 @@ import MuseScore.AppShell
 StyledDialogView {
     id: root
 
-    title: qsTrc("appshell/about", "About MuseScore Studio")
+    title: qsTrc("appshell/about", "About Scoria")
 
     contentHeight: content.implicitHeight
     contentWidth: 400
@@ -141,7 +141,7 @@ StyledDialogView {
 
         StyledTextLabel {
             Layout.fillWidth: true
-            text: qsTrc("appshell/about", "Copyright © 1999-2026 MuseScore Limited and others.\nPublished under the <a href=\"%1\">GNU General Public License version 3</a>.")
+            text: qsTrc("appshell/about", "Scoria is a fork of MuseScore Studio by AnimatedGTVR.\nMuseScore Studio: Copyright © 1999-2026 MuseScore Limited and others.\nPublished under the <a href=\"%1\">GNU General Public License version 3</a>.")
                   .arg("https://www.gnu.org/licenses/gpl-3.0.html")
                   .replace("\n", "<br>")
 

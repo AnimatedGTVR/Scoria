@@ -21,6 +21,9 @@
  */
 #include "generalpreferencesmodel.h"
 
+#include <QDir>
+#include <QFile>
+
 #include "languages/languageserrors.h"
 
 #include "log.h"
@@ -305,4 +308,37 @@ void GeneralPreferencesModel::setAutoUpdateNewAppVersion(bool value)
 QString GeneralPreferencesModel::museScorePrivacyPolicyUrl() const
 {
     return QString::fromStdString(updateConfiguration()->privacyPolicyUrl());
+}
+
+// Scoria: read before Qt starts (see src/app/main.cpp), so it lives in a plain file, not in the settings
+static QString displayServerFilePath()
+{
+    return QDir::homePath() + "/.config/Scoria/display-server";
+}
+
+QString GeneralPreferencesModel::displayServer() const
+{
+    QFile f(displayServerFilePath());
+    if (!f.open(QIODevice::ReadOnly)) {
+        return "x11";
+    }
+    const QString value = QString::fromUtf8(f.readAll()).trimmed().toLower();
+    return (value == "wayland" || value == "auto") ? value : QString("x11");
+}
+
+void GeneralPreferencesModel::setDisplayServer(const QString& server)
+{
+    if (server == displayServer()) {
+        return;
+    }
+
+    QDir().mkpath(QDir::homePath() + "/.config/Scoria");
+    QFile f(displayServerFilePath());
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        f.write(server.toUtf8());
+        f.write("\n");
+    }
+
+    emit displayServerChanged();
+    setRestartRequired(true);
 }

@@ -26,6 +26,8 @@
 #include <QStyleHints>
 #include <QQuickWindow>
 #include <QSslSocket>
+#include <QDir>  // Scoria: display server choice
+#include <QFile>
 
 #include "appfactory.h"
 #include "internal/commandlineparser.h"
@@ -104,9 +106,25 @@ int main(int argc, char** argv)
         qputenv("QT_QPA_PLATFORMTHEME", "gtk3");
     }
 
-    //! NOTE Forced X11, with Wayland there are a number of problems now
+    //! Scoria: choose X11 or Wayland. Upstream always forces X11 because its Wayland support is incomplete,
+    //! so X11 stays the default; Wayland can be picked with SCORIA_DISPLAY=wayland or by writing "wayland"
+    //! into ~/.config/Scoria/display-server ("x11" / "auto" also work). MU_QT_QPA_PLATFORM still overrides all.
     if (qEnvironmentVariable("MU_QT_QPA_PLATFORM") == "") {
-        qputenv("QT_QPA_PLATFORM", "xcb");
+        QString displayServer = qEnvironmentVariable("SCORIA_DISPLAY").trimmed().toLower();
+        if (displayServer.isEmpty()) {
+            QFile f(QDir::homePath() + "/.config/Scoria/display-server");
+            if (f.open(QIODevice::ReadOnly)) {
+                displayServer = QString::fromUtf8(f.readAll()).trimmed().toLower();
+            }
+        }
+
+        if (displayServer == "wayland") {
+            qputenv("QT_QPA_PLATFORM", "wayland;xcb"); // fall back to X11 if there's no Wayland session
+        } else if (displayServer == "auto") {
+            // let Qt pick based on the session
+        } else {
+            qputenv("QT_QPA_PLATFORM", "xcb");
+        }
     }
 #endif
 

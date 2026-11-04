@@ -57,6 +57,13 @@ void PlaybackCommandsController::init()
     registerCommand(COUNTIN_TOGGLE_COMMAND, &IPlaybackController::toggleCountIn);
     registerCommand(OPEN_PLAYBACK_SETUP_COMMAND, [this]() { return showPlaybackSetup(); });
     registerCommand(ADD_AUDIO_TRACK_COMMAND, [this]() { return audioFileTracks()->addTrackInteractive(); });
+    registerCommand(REMOVE_AUDIO_TRACK_COMMAND, [this](const rcommand::Params& params) {
+        if (!params.contains("track-id")) {
+            return make_ret(Ret::Code::BadArgs);
+        }
+        audioFileTracks()->removeTrack(static_cast<TrackId>(params.at("track-id").toInt()));
+        return make_ok();
+    });
     registerCommand(RELOAD_PLAYBACK_CACHE_COMMAND, &IPlaybackController::reloadPlaybackCache);
 
     registerCommand(TOGGLE_MIXER_SECTION_COMMAND, [this](const rcommand::Params& params) { return toggleMixerSection(params); });

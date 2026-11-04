@@ -5,6 +5,8 @@
         <file>configs/learn.cfg</file>
         <file>configs/light.cfg</file>
         <file>configs/dark.cfg</file>
+        <file>configs/midnight.cfg</file>
+        <file>configs/ember.cfg</file>
         <file>configs/high_contrast_black.cfg</file>
         <file>configs/high_contrast_white.cfg</file>
         <file>configs/shortcuts.cfg</file>

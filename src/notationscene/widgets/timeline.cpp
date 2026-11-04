@@ -3222,7 +3222,9 @@ QString Timeline::cursorIsOn(const QPoint& cursorPos)
 
 const TimelineTheme& Timeline::activeTheme() const
 {
-    if (uiConfiguration()->currentTheme().codeKey == muse::ui::DARK_THEME_CODE) {
+    if (uiConfiguration()->currentTheme().codeKey == muse::ui::DARK_THEME_CODE
+        || uiConfiguration()->currentTheme().codeKey == muse::ui::MIDNIGHT_THEME_CODE  // Scoria
+        || uiConfiguration()->currentTheme().codeKey == muse::ui::EMBER_THEME_CODE) {
         return _darkTheme;
     }
 

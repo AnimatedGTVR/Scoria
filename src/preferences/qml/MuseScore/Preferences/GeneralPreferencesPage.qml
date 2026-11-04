@@ -67,6 +67,48 @@ PreferencesPage {
 
         SeparatorLine { }
 
+        // Scoria: pick X11 or Wayland (applies after restart)
+        BaseSection {
+            id: displayServerSection
+
+            title: qsTrc("preferences", "Display server")
+            navigation.section: root.navigationSection
+            navigation.order: root.navigationOrderStart + 50
+            navigation.direction: NavigationPanel.Horizontal
+
+            StyledDropdown {
+                id: displayServerDropdown
+
+                width: displayServerSection.columnWidth
+
+                model: [
+                    { text: qsTrc("preferences", "X11 (recommended)"), value: "x11" },
+                    { text: qsTrc("preferences", "Wayland (experimental)"), value: "wayland" },
+                    { text: qsTrc("preferences", "Automatic"), value: "auto" }
+                ]
+
+                currentIndex: displayServerDropdown.indexOfValue(preferencesModel.displayServer)
+
+                navigation.name: "DisplayServerBox"
+                navigation.panel: displayServerSection.navigation
+                navigation.order: 1
+
+                onActivated: function(index, value) {
+                    preferencesModel.displayServer = value
+                }
+            }
+
+            StyledTextLabel {
+                width: displayServerSection.columnWidth
+                visible: preferencesModel.restartRequired
+                text: qsTrc("preferences", "Restart Scoria to apply.")
+                horizontalAlignment: Text.AlignLeft
+                opacity: 0.7
+            }
+        }
+
+        SeparatorLine { }
+
         ProgramStartSection {
             model: preferencesModel
 

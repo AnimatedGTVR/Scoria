@@ -116,6 +116,13 @@ static const std::vector<CommandInfo> s_commandInfos = {
         Decoration(IconCode::Code::NONE)
     },
     CommandInfo{
+        REMOVE_AUDIO_TRACK_COMMAND,
+        TranslatableString("playback", "Remove audio track"),
+        TranslatableString("playback", "Remove an audio track from the score"),
+        InputSchema({ { "track-id", Arg(DataType::Int, u"Audio track id") } }),
+        Decoration()
+    },
+    CommandInfo{
         OPEN_PLAYBACK_SETUP_COMMAND,
         TranslatableString("playback", "Playback setup"),
         TranslatableString("playback", "Show playback setup"),

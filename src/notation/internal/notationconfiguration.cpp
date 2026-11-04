@@ -397,7 +397,9 @@ QColor NotationConfiguration::backgroundColor() const
 {
     if (uiConfiguration()->currentTheme().codeKey == LIGHT_THEME_CODE) {
         return settings()->value(LIGHT_SCORE_BACKGROUND_COLOR).toQColor();
-    } else if (uiConfiguration()->currentTheme().codeKey == DARK_THEME_CODE) {
+    } else if (uiConfiguration()->currentTheme().codeKey == DARK_THEME_CODE
+               || uiConfiguration()->currentTheme().codeKey == MIDNIGHT_THEME_CODE  // Scoria
+               || uiConfiguration()->currentTheme().codeKey == EMBER_THEME_CODE) {
         return settings()->value(DARK_SCORE_BACKGROUND_COLOR).toQColor();
     } else if (uiConfiguration()->currentTheme().codeKey == HIGH_CONTRAST_BLACK_THEME_CODE) {
         return settings()->value(HC_BLACK_SCORE_BACKGROUND_COLOR).toQColor();
@@ -410,7 +412,9 @@ void NotationConfiguration::setBackgroundColor(const QColor& color)
 {
     if (uiConfiguration()->currentTheme().codeKey == LIGHT_THEME_CODE) {
         settings()->setSharedValue(LIGHT_SCORE_BACKGROUND_COLOR, Val(color));
-    } else if (uiConfiguration()->currentTheme().codeKey == DARK_THEME_CODE) {
+    } else if (uiConfiguration()->currentTheme().codeKey == DARK_THEME_CODE
+               || uiConfiguration()->currentTheme().codeKey == MIDNIGHT_THEME_CODE  // Scoria
+               || uiConfiguration()->currentTheme().codeKey == EMBER_THEME_CODE) {
         settings()->setSharedValue(DARK_SCORE_BACKGROUND_COLOR, Val(color));
     } else if (uiConfiguration()->currentTheme().codeKey == HIGH_CONTRAST_BLACK_THEME_CODE) {
         settings()->setSharedValue(HC_BLACK_SCORE_BACKGROUND_COLOR, Val(color));

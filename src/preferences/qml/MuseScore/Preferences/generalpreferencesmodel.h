@@ -61,6 +61,7 @@ class GeneralPreferencesModel : public QObject, public muse::Contextable, public
     Q_PROPERTY(QStringList scorePathFilter READ scorePathFilter CONSTANT)
 
     Q_PROPERTY(bool showWelcomeDialog READ showWelcomeDialog WRITE setShowWelcomeDialog NOTIFY showWelcomeDialogChanged)
+    Q_PROPERTY(QString displayServer READ displayServer WRITE setDisplayServer NOTIFY displayServerChanged) // Scoria
 
     Q_PROPERTY(
         bool needCheckForNewAppVersion READ needCheckForNewAppVersion WRITE setNeedCheckForNewAppVersion NOTIFY needCheckForNewAppVersionChanged)
@@ -96,7 +97,9 @@ public:
     QStringList scorePathFilter() const;
 
     bool showWelcomeDialog() const;
+    QString displayServer() const; // Scoria: "x11", "wayland" or "auto"
     void setShowWelcomeDialog(bool show);
+    void setDisplayServer(const QString& server);
 
     bool needCheckForNewAppVersion() const;
     bool autoUpdateNewAppVersion() const;
@@ -128,6 +131,7 @@ signals:
     void startupScorePathChanged();
 
     void showWelcomeDialogChanged();
+    void displayServerChanged();
 
     void needCheckForNewAppVersionChanged(bool value);
     void autoUpdateNewAppVersionChanged(bool value);

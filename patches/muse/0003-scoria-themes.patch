@@ -1,0 +1,58 @@
+diff --git a/framework/ui/internal/themeconverter.cpp b/framework/ui/internal/themeconverter.cpp
+index 31a1e127..ec637df2 100644
+--- a/framework/ui/internal/themeconverter.cpp
++++ b/framework/ui/internal/themeconverter.cpp
+@@ -73,10 +73,16 @@ static QString titleForTheme(const ThemeInfo& theme)
+ {
+     if (theme.codeKey == LIGHT_THEME_CODE) {
+         //: The name of the light ui theme
+-        return muse::qtrc("ui", "Light");
++        return muse::qtrc("ui", "Ocean Light");
+     } else if (theme.codeKey == DARK_THEME_CODE) {
+         //: The name of the dark ui theme
+-        return muse::qtrc("ui", "Dark");
++        return muse::qtrc("ui", "Ocean Dark");
++    } else if (theme.codeKey == MIDNIGHT_THEME_CODE) {
++        //: Scoria: name of the violet dark ui theme
++        return muse::qtrc("ui", "Midnight");
++    } else if (theme.codeKey == EMBER_THEME_CODE) {
++        //: Scoria: name of the warm dark ui theme
++        return muse::qtrc("ui", "Ember");
+     } else if (theme.codeKey == HIGH_CONTRAST_WHITE_THEME_CODE) {
+         //: The name of the high contrast light ui theme
+         return muse::qtrc("ui", "White");
+diff --git a/framework/ui/uitypes.h b/framework/ui/uitypes.h
+index d8f2bbde..386bdc30 100644
+--- a/framework/ui/uitypes.h
++++ b/framework/ui/uitypes.h
+@@ -55,6 +55,9 @@ static const ThemeCode LIGHT_THEME_CODE("light");
+ static const ThemeCode DARK_THEME_CODE("dark");
+ static const ThemeCode HIGH_CONTRAST_WHITE_THEME_CODE("high_contrast_white");
+ static const ThemeCode HIGH_CONTRAST_BLACK_THEME_CODE("high_contrast_black");
++// Scoria: extra built-in dark themes
++static const ThemeCode MIDNIGHT_THEME_CODE("midnight");
++static const ThemeCode EMBER_THEME_CODE("ember");
+ 
+ inline std::vector<ThemeCode> allStandardThemeCodes()
+ {
+@@ -62,14 +65,18 @@ inline std::vector<ThemeCode> allStandardThemeCodes()
+         LIGHT_THEME_CODE,
+         DARK_THEME_CODE,
+         HIGH_CONTRAST_WHITE_THEME_CODE,
+-        HIGH_CONTRAST_BLACK_THEME_CODE
++        HIGH_CONTRAST_BLACK_THEME_CODE,
++        MIDNIGHT_THEME_CODE,
++        EMBER_THEME_CODE
+     };
+ }
+ 
+ inline bool isDarkTheme(const ThemeCode& themeCode)
+ {
+     return themeCode == DARK_THEME_CODE
+-           || themeCode == HIGH_CONTRAST_BLACK_THEME_CODE;
++           || themeCode == HIGH_CONTRAST_BLACK_THEME_CODE
++           || themeCode == MIDNIGHT_THEME_CODE
++           || themeCode == EMBER_THEME_CODE;
+ }
+ 
+ inline bool isHighContrastTheme(const ThemeCode& themeCode)

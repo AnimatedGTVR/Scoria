@@ -131,6 +131,15 @@ void MixerPanelContextMenuModel::load()
         emitMixerSectionVisibilityChanged(sectionType);
     });
 
+    // Scoria: rebuild when audio tracks come and go, so the "Remove audio track" submenu stays current
+    audioFileTracks()->trackAdded().onReceive(this, [this](muse::audio::TrackId) { buildItems(); });
+    audioFileTracks()->trackRemoved().onReceive(this, [this](muse::audio::TrackId) { buildItems(); });
+
+    buildItems();
+}
+
+void MixerPanelContextMenuModel::buildItems()
+{
     MenuItemList viewMenuItems {
         buildSectionVisibleItem(MixerSectionType::Labels),
         buildSectionVisibleItem(MixerSectionType::Sound),
@@ -153,9 +162,22 @@ void MixerPanelContextMenuModel::load()
 
     MenuItemList items {
         makeMenuItem(ADD_AUDIO_TRACK_COMMAND), // Scoria
-        makeMenuItem(OPEN_PLAYBACK_SETUP_COMMAND),
-        makeMenu(TranslatableString("playback", "View"), viewMenuItems, VIEW_MENU_ID)
     };
+
+    // Scoria: one "Remove" entry per audio track
+    MenuItemList removeItems;
+    for (const auto& [trackId, track] : audioFileTracks()->tracks()) {
+        MenuItem* item = new MenuItem(this);
+        item->setTitle(TranslatableString::untranslatable(String::fromStdString(track.name)));
+        item->setCommandQuery(rcommand::make_query(REMOVE_AUDIO_TRACK_COMMAND, { { "track-id", Val(static_cast<int>(trackId)) } }));
+        removeItems << item;
+    }
+    if (!removeItems.empty()) {
+        items << makeMenu(TranslatableString("playback", "Remove audio track"), removeItems, "scoria-remove-audio-track");
+    }
+
+    items << makeMenuItem(OPEN_PLAYBACK_SETUP_COMMAND);
+    items << makeMenu(TranslatableString("playback", "View"), viewMenuItems, VIEW_MENU_ID);
 
     setItems(items);
 }
