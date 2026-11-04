@@ -1185,6 +1185,43 @@ void PlaybackController::addTrack(const InstrumentTrackId& instrumentTrackId, bo
     }
 }
 
+// Scoria: "Audio Track" instrument ------------------------------------------------------------
+static const std::string SCORIA_AUDIO_PREFIX = "scoria-audio:";
+static const muse::String SCORIA_AUDIO_INSTRUMENT_ID = u"scoria-audio-track";
+
+bool PlaybackController::isScoriaAudioTrack(const InstrumentTrackId& instrumentTrackId)
+{
+    return instrumentTrackId.instrumentId == SCORIA_AUDIO_INSTRUMENT_ID;
+}
+
+AudioInputParams PlaybackController::scoriaAudioParams(const std::string& filePath)
+{
+    AudioInputParams params;
+    params.resourceMeta.id = SCORIA_AUDIO_PREFIX + filePath;
+    params.resourceMeta.vendor = "Scoria";
+    params.resourceMeta.type = std::string(muse::audio::FLUID_SOUNDFONT_TYPE_NAME);
+    return params;
+}
+
+void PlaybackController::askForScoriaAudioFile(const InstrumentTrackId& instrumentTrackId, TrackId trackId)
+{
+    const std::vector<std::string> filter = {
+        muse::trc("playback", "Audio files") + " (*.mp3 *.wav *.flac *.MP3 *.WAV *.FLAC)",
+        muse::trc("playback", "All files") + " (*)"
+    };
+
+    interactive()->selectOpeningFile(muse::trc("playback", "Choose the audio file for this Audio Track"), "", filter)
+    .onResolve(this, [this, instrumentTrackId, trackId](const muse::io::path_t& path) {
+        if (path.empty()) {
+            return; // stays silent; the user can add the instrument again
+        }
+        AudioInputParams params = scoriaAudioParams(path.toStdString());
+        playback()->setSourceParams(trackId, params);
+        audioSettings()->setTrackInputParams(instrumentTrackId, params);
+    });
+}
+// ---------------------------------------------------------------------------------------------
+
 void PlaybackController::doAddTrack(const InstrumentTrackId& instrumentTrackId, const std::string& title,
                                     bool projectHadNoAudioSettings, const TrackAddFinished& onFinished)
 {
@@ -1206,6 +1243,14 @@ void PlaybackController::doAddTrack(const InstrumentTrackId& instrumentTrackId, 
     AudioResourceMeta originMeta = inParams.resourceMeta;
 
     bool isMetronome = notationPlayback()->metronomeTrackId() == instrumentTrackId;
+
+    // Scoria: the Audio Track instrument always uses the audio-file sound (silent until a file is chosen)
+    bool needsScoriaAudioFile = false;
+    if (isScoriaAudioTrack(instrumentTrackId)
+        && inParams.resourceMeta.id.rfind(SCORIA_AUDIO_PREFIX, 0) != 0) {
+        inParams = scoriaAudioParams("");
+        needsScoriaAudioFile = true;
+    }
 
     if (!inParams.isValid()) {
         if (isMetronome) {
@@ -1242,7 +1287,8 @@ void PlaybackController::doAddTrack(const InstrumentTrackId& instrumentTrackId, 
         AudioOutputParams originParams;
         TrackAddFinished onFinished;
         AudioResourceMeta originMeta;
-    } tctx = { playbackKey, instrumentTrackId, projectHadNoAudioSettings, originParams, onFinished,  originMeta };
+        bool needsScoriaAudioFile;
+    } tctx = { playbackKey, instrumentTrackId, projectHadNoAudioSettings, originParams, onFinished,  originMeta, needsScoriaAudioFile };
 
     playback()->addTrack(title, std::move(playbackData), trackParams)
     .onResolve(this, [this, tctx](const TrackId trackId, const TrackParams& appliedParams) {
@@ -1278,6 +1324,10 @@ void PlaybackController::doAddTrack(const InstrumentTrackId& instrumentTrackId, 
 
         if (trackNewlyAdded) {
             onTrackNewlyAdded(instrumentTrackId);
+        }
+
+        if (tctx.needsScoriaAudioFile) {
+            askForScoriaAudioFile(instrumentTrackId, trackId);
         }
 
         if (shouldLoadDrumset(instrumentTrackId, originMeta, appliedParams.source.resourceMeta)) {

@@ -160,9 +160,7 @@ void MixerPanelContextMenuModel::buildItems()
     viewMenuItems.push_back(buildSectionVisibleItem(MixerSectionType::MuteAndSolo));
     viewMenuItems.push_back(buildSectionVisibleItem(MixerSectionType::Title));
 
-    MenuItemList items {
-        makeMenuItem(ADD_AUDIO_TRACK_COMMAND), // Scoria
-    };
+    MenuItemList items;
 
     // Scoria: one "Remove" entry per audio track
     MenuItemList removeItems;

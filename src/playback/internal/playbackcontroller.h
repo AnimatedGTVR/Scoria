@@ -241,6 +241,11 @@ private:
 
     void onTrackNewlyAdded(const engraving::InstrumentTrackId& instrumentTrackId);
 
+    // Scoria: "Audio Track" instrument (its sound is an audio file)
+    static bool isScoriaAudioTrack(const engraving::InstrumentTrackId& instrumentTrackId);
+    static muse::audio::AudioInputParams scoriaAudioParams(const std::string& filePath);
+    void askForScoriaAudioFile(const engraving::InstrumentTrackId& instrumentTrackId, muse::audio::TrackId trackId);
+
     muse::audio::secs_t playedTickToSecs(int tick) const;
 
     notation::INotationPtr m_notation;

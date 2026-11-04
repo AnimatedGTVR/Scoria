@@ -1,23 +1,27 @@
 diff --git a/framework/audio/engine/CMakeLists.txt b/framework/audio/engine/CMakeLists.txt
-index 8ca647a3..90dc93a0 100644
+index 8ca647a3..b9738aed 100644
 --- a/framework/audio/engine/CMakeLists.txt
 +++ b/framework/audio/engine/CMakeLists.txt
-@@ -88,6 +88,8 @@ else()
+@@ -88,6 +88,12 @@ else()
          internal/nodes/mixernode.h
          internal/nodes/eventaudionode.cpp
          internal/nodes/eventaudionode.h
 +        internal/nodes/audiofilenode.cpp
 +        internal/nodes/audiofilenode.h
++        internal/codecs/audiofiledecoder.cpp
++        internal/codecs/audiofiledecoder.h
++        internal/synthesizers/audiofilesynth/audiofilesynth.cpp
++        internal/synthesizers/audiofilesynth/audiofilesynth.h
          internal/nodes/fxnode.cpp
          internal/nodes/fxnode.h
          internal/nodes/fxchain.cpp
-@@ -230,3 +232,6 @@ if (MUSE_MODULE_AUDIO_EXPORT)
+@@ -230,3 +236,6 @@ if (MUSE_MODULE_AUDIO_EXPORT)
  endif() # MUSE_MODULE_AUDIO_EXPORT
  
  target_link_libraries(muse_audio_engine PRIVATE muse_audio_common)
 +
 +# Scoria: audio file tracks. dr_libs has many static helpers, keep it out of unity batches.
-+set_source_files_properties(internal/nodes/audiofilenode.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
++set_source_files_properties(internal/codecs/audiofiledecoder.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 diff --git a/framework/audio/engine/internal/audiocontext.cpp b/framework/audio/engine/internal/audiocontext.cpp
 index ef06efbe..35ecf1ce 100644
 --- a/framework/audio/engine/internal/audiocontext.cpp
@@ -85,23 +89,22 @@ index ef06efbe..35ecf1ce 100644
  }
  
  RetVal2<TrackId, TrackParams> AudioContext::addTrack(const std::string& trackName,
-diff --git a/framework/audio/engine/internal/nodes/audiofilenode.cpp b/framework/audio/engine/internal/nodes/audiofilenode.cpp
+diff --git a/framework/audio/engine/internal/codecs/audiofiledecoder.cpp b/framework/audio/engine/internal/codecs/audiofiledecoder.cpp
 new file mode 100644
-index 00000000..0af59ccb
+index 00000000..0d121382
 --- /dev/null
-+++ b/framework/audio/engine/internal/nodes/audiofilenode.cpp
-@@ -0,0 +1,229 @@
++++ b/framework/audio/engine/internal/codecs/audiofiledecoder.cpp
+@@ -0,0 +1,103 @@
 +/*
 + * SPDX-License-Identifier: GPL-3.0-only
-+ * Scoria: audio file source node (MP3 / WAV / FLAC / OGG backing tracks)
++ * Scoria: decode MP3 / WAV / FLAC files to interleaved stereo float
 + *
 + * This program is free software: you can redistribute it and/or modify
 + * it under the terms of the GNU General Public License version 3 as
 + * published by the Free Software Foundation.
 + */
-+#include "audiofilenode.h"
++#include "audiofiledecoder.h"
 +
-+#include <algorithm>
 +#include <cstring>
 +
 +#define DR_WAV_IMPLEMENTATION
@@ -117,7 +120,6 @@ index 00000000..0af59ccb
 +#include "log.h"
 +
 +using namespace muse;
-+using namespace muse::audio;
 +using namespace muse::audio::engine;
 +
 +namespace {
@@ -140,19 +142,15 @@ index 00000000..0af59ccb
 +}
 +}
 +
-+AudioFileNode::AudioFileNode(const ByteArray& fileData)
++DecodedAudio muse::audio::engine::decodeAudioFile(const ByteArray& d)
 +{
-+    if (!decode(fileData)) {
-+        LOGE() << "Scoria: unsupported or corrupt audio file (" << fileData.size() << " bytes)";
-+    }
-+}
++    DecodedAudio out;
++    std::vector<float>& m_samples = out.samples;
 +
-+bool AudioFileNode::decode(const ByteArray& d)
-+{
 +    const void* data = d.constData();
 +    const size_t size = d.size();
 +    if (!data || size == 0) {
-+        return false;
++        return out;
 +    }
 +
 +    unsigned int channels = 0;
@@ -190,13 +188,92 @@ index 00000000..0af59ccb
 +
 +    if (m_samples.empty() || rate == 0) {
 +        m_samples.clear();
-+        return false;
++        return out;
 +    }
 +
-+    m_frames = m_samples.size() / 2;
-+    m_fileRate = rate;
-+    LOGI() << "Scoria: decoded audio file, " << m_frames << " frames @ " << rate << " Hz, "
-+           << channels << " ch, " << duration() << " s";
++    out.frames = m_samples.size() / 2;
++    out.sampleRate = rate;
++    LOGI() << "Scoria: decoded audio file, " << out.frames << " frames @ " << rate << " Hz, "
++           << channels << " ch, " << out.duration() << " s";
++    return out;
++}
++
+diff --git a/framework/audio/engine/internal/codecs/audiofiledecoder.h b/framework/audio/engine/internal/codecs/audiofiledecoder.h
+new file mode 100644
+index 00000000..04ea2bdd
+--- /dev/null
++++ b/framework/audio/engine/internal/codecs/audiofiledecoder.h
+@@ -0,0 +1,28 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * Scoria: decode MP3 / WAV / FLAC files to interleaved stereo float
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ */
++#pragma once
++
++#include <cstdint>
++#include <vector>
++
++#include "global/types/bytearray.h"
++
++namespace muse::audio::engine {
++struct DecodedAudio {
++    std::vector<float> samples; // interleaved stereo (mono is duplicated)
++    uint64_t frames = 0;        // samples per channel
++    unsigned int sampleRate = 0;
++
++    bool isValid() const { return frames > 0 && sampleRate > 0; }
++    double duration() const { return sampleRate > 0 ? static_cast<double>(frames) / sampleRate : 0.0; }
++};
++
++//! Detects the format from the file header (RIFF/WAVE, fLaC, otherwise MP3)
++DecodedAudio decodeAudioFile(const ByteArray& data);
++}
+diff --git a/framework/audio/engine/internal/nodes/audiofilenode.cpp b/framework/audio/engine/internal/nodes/audiofilenode.cpp
+new file mode 100644
+index 00000000..100f9e24
+--- /dev/null
++++ b/framework/audio/engine/internal/nodes/audiofilenode.cpp
+@@ -0,0 +1,159 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * Scoria: audio file source node (MP3 / WAV / FLAC / OGG backing tracks)
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ */
++#include "audiofilenode.h"
++
++#include <algorithm>
++#include <cstring>
++
++#include "../codecs/audiofiledecoder.h"
++#include "log.h"
++
++using namespace muse;
++using namespace muse::audio;
++using namespace muse::audio::engine;
++
++AudioFileNode::AudioFileNode(const ByteArray& fileData)
++{
++    if (!decode(fileData)) {
++        LOGE() << "Scoria: unsupported or corrupt audio file (" << fileData.size() << " bytes)";
++    }
++}
++
++bool AudioFileNode::decode(const ByteArray& d)
++{
++    DecodedAudio a = decodeAudioFile(d);
++    if (!a.isValid()) {
++        return false;
++    }
++    m_samples = std::move(a.samples);
++    m_frames = a.frames;
++    m_fileRate = a.sampleRate;
 +    return true;
 +}
 +
@@ -393,6 +470,363 @@ index 00000000..3a1c11a8
 +
 +using AudioFileNodePtr = std::shared_ptr<AudioFileNode>;
 +}
+diff --git a/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp
+new file mode 100644
+index 00000000..ab03168a
+--- /dev/null
++++ b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.cpp
+@@ -0,0 +1,240 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * Scoria: "Audio Track" instrument sound
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ */
++#include "audiofilesynth.h"
++
++#include <algorithm>
++#include <cmath>
++#include <cstring>
++
++#include "global/io/file.h"
++#include "mpe/automationpoint.h"
++#include "log.h"
++
++using namespace muse;
++using namespace muse::audio;
++using namespace muse::audio::synth;
++
++namespace {
++constexpr double FADE_SECS = 0.008; // short fade at note edges so starts/stops don't click
++
++float levelToGain(mpe::dynamic_level_t level)
++{
++    // mf ("natural") plays the file at its own volume; every step of dynamics is ~3.5 dB
++    static const float natural = static_cast<float>(mpe::dynamicLevelFromType(mpe::DynamicType::Natural));
++    static const float step = static_cast<float>(mpe::DYNAMIC_LEVEL_STEP);
++    const float steps = (static_cast<float>(level) - natural) / step;
++    return std::clamp(std::pow(10.0f, steps * 3.5f / 20.0f), 0.0f, 4.0f);
++}
++}
++
++bool AudioFileSynth::isAudioFileResource(const AudioInputParams& params)
++{
++    return params.resourceMeta.id.rfind(RESOURCE_PREFIX, 0) == 0;
++}
++
++AudioFileSynth::AudioFileSynth(const AudioInputParams& params)
++    : AbstractSynthesizer(params)
++{
++    const std::string path = params.resourceMeta.id.substr(std::strlen(RESOURCE_PREFIX));
++
++    ByteArray data;
++    if (io::File::readFile(io::path_t(path), data) && !data.empty()) {
++        m_audio = engine::decodeAudioFile(data);
++    }
++
++    if (!m_audio.isValid()) {
++        LOGE() << "Scoria: can't load audio for Audio Track instrument: " << path;
++    }
++
++    m_timeline = std::make_shared<Timeline>();
++}
++
++std::string AudioFileSynth::name() const
++{
++    return "Scoria Audio File";
++}
++
++AudioSourceType AudioFileSynth::type() const
++{
++    return AudioSourceType::Fluid; // reuses the soundfont source type so no enum/serialization changes are needed
++}
++
++bool AudioFileSynth::isValid() const
++{
++    return m_audio.isValid();
++}
++
++void AudioFileSynth::setOutputSpec(const OutputSpec& spec)
++{
++    m_outputSpec = spec;
++}
++
++void AudioFileSynth::setupSound(const mpe::PlaybackSetupData& setupData)
++{
++    m_setupData = setupData;
++}
++
++void AudioFileSynth::setupEvents(const mpe::PlaybackData& playbackData)
++{
++    m_playbackData = playbackData;
++    rebuildTimeline(playbackData.originEvents, playbackData.dynamics);
++
++    // Score edits arrive here: rests, notes and dynamics update live
++    m_playbackData.mainStream.onReceive(this, [this](const mpe::PlaybackEventsMap& events,
++                                                     const mpe::DynamicAutomationLayers& dynamics) {
++        m_playbackData.originEvents = events;
++        m_playbackData.dynamics = dynamics;
++        rebuildTimeline(events, dynamics);
++    });
++}
++
++const mpe::PlaybackData& AudioFileSynth::playbackData() const
++{
++    return m_playbackData;
++}
++
++void AudioFileSynth::rebuildTimeline(const mpe::PlaybackEventsMap& events, const mpe::DynamicAutomationLayers& dynamics)
++{
++    auto tl = std::make_shared<Timeline>();
++    tl->dynamics = dynamics;
++
++    for (const auto& [timestamp, list] : events) {
++        for (const mpe::PlaybackEvent& ev : list) {
++            const mpe::NoteEvent* note = std::get_if<mpe::NoteEvent>(&ev);
++            if (!note) {
++                continue; // rests and everything else mean "silent"
++            }
++            const mpe::ArrangementContext& ac = note->arrangementCtx();
++            Gate g;
++            g.startUs = ac.actualTimestamp.raw();
++            g.endUs = g.startUs + ac.actualDuration.raw();
++            g.noteLevel = levelToGain(note->expressionCtx().nominalDynamicLevel);
++            if (g.endUs > g.startUs) {
++                tl->gates.push_back(g);
++            }
++        }
++    }
++
++    std::sort(tl->gates.begin(), tl->gates.end(), [](const Gate& a, const Gate& b) { return a.startUs < b.startUs; });
++
++    std::lock_guard lock(m_timelineMutex);
++    m_timeline = tl;
++}
++
++float AudioFileSynth::targetGainAt(const Timeline& tl, int64_t posUs) const
++{
++    // Is a note sounding here? (gates are sorted by start; notes can overlap)
++    auto it = std::upper_bound(tl.gates.begin(), tl.gates.end(), posUs, [](int64_t p, const Gate& g) { return p < g.startUs; });
++    const Gate* active = nullptr;
++    while (it != tl.gates.begin()) {
++        --it;
++        if (posUs < it->endUs) {
++            active = &*it;
++            break;
++        }
++        if (posUs - it->startUs > 600LL * 1000000LL) {
++            break; // nothing sane lasts 10 minutes, stop scanning back
++        }
++    }
++    if (!active) {
++        return 0.0f;
++    }
++
++    // Continuous dynamics (handles hairpins); fall back to the note's own dynamic
++    float best = -1.0f;
++    for (const auto& [layer, curve] : tl.dynamics) {
++        if (curve.empty()) {
++            continue;
++        }
++        const auto level = mpe::dynamicLevelFromNormalized(mpe::evaluateCurveAt(curve, mpe::timestamp_t(posUs)));
++        best = std::max(best, levelToGain(level));
++    }
++    return best >= 0.0f ? best : active->noteLevel;
++}
++
++TimePosition AudioFileSynth::playbackPosition() const
++{
++    return TimePosition::fromTime(secs_t(m_positionSecs), m_outputSpec.sampleRate);
++}
++
++void AudioFileSynth::setPlaybackPosition(const TimePosition& position)
++{
++    m_positionSecs = position.time();
++}
++
++void AudioFileSynth::flushSound()
++{
++    m_currentGain = 0.0f;
++}
++
++samples_t AudioFileSynth::process(float* buffer, samples_t samplesPerChannel)
++{
++    const audioch_t outCh = m_outputSpec.audioChannelCount;
++    if (!buffer || outCh == 0 || m_outputSpec.sampleRate == 0) {
++        return 0;
++    }
++
++    const bool playing = m_mode == ProcessMode::Playing || m_mode == ProcessMode::PlayingOffline;
++    if (!playing || !m_audio.isValid()) {
++        std::fill(buffer, buffer + samplesPerChannel * outCh, 0.0f);
++        return samplesPerChannel;
++    }
++
++    std::shared_ptr<const Timeline> tl;
++    {
++        std::lock_guard lock(m_timelineMutex);
++        tl = m_timeline;
++    }
++
++    const double outRate = m_outputSpec.sampleRate;
++    const double step = static_cast<double>(m_audio.sampleRate) / outRate;
++    const float fadeStep = static_cast<float>(1.0 / (FADE_SECS * outRate));
++    const std::vector<float>& s = m_audio.samples;
++    const uint64_t frames = m_audio.frames;
++
++    // The gate/dynamics target is evaluated every 64 samples (~1.5 ms); the gain ramps toward it
++    float target = 0.0f;
++    double src = m_positionSecs * m_audio.sampleRate;
++
++    for (samples_t i = 0; i < samplesPerChannel; ++i, src += step) {
++        if ((i & 63) == 0) {
++            const double t = m_positionSecs + static_cast<double>(i) / outRate;
++            target = targetGainAt(*tl, static_cast<int64_t>(t * 1000000.0));
++        }
++        if (m_currentGain < target) {
++            m_currentGain = std::min(target, m_currentGain + fadeStep * std::max(target, 1.0f));
++        } else if (m_currentGain > target) {
++            m_currentGain = std::max(target, m_currentGain - fadeStep * std::max(m_currentGain, 1.0f));
++        }
++
++        float l = 0.0f;
++        float r = 0.0f;
++        if (m_currentGain > 0.0f && src >= 0.0) {
++            const uint64_t i0 = static_cast<uint64_t>(src);
++            if (i0 + 1 < frames) {
++                const float frac = static_cast<float>(src - static_cast<double>(i0));
++                const float* a = &s[i0 * 2];
++                l = (a[0] + (a[2] - a[0]) * frac) * m_currentGain;
++                r = (a[1] + (a[3] - a[1]) * frac) * m_currentGain;
++            }
++        }
++
++        float* out = buffer + i * outCh;
++        out[0] = l;
++        if (outCh > 1) {
++            out[1] = r;
++        }
++        for (audioch_t c = 2; c < outCh; ++c) {
++            out[c] = 0.0f;
++        }
++    }
++
++    m_positionSecs += static_cast<double>(samplesPerChannel) / outRate;
++    return samplesPerChannel;
++}
+diff --git a/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.h b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.h
+new file mode 100644
+index 00000000..fc0acbb1
+--- /dev/null
++++ b/framework/audio/engine/internal/synthesizers/audiofilesynth/audiofilesynth.h
+@@ -0,0 +1,78 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * Scoria: "Audio Track" instrument sound
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ */
++#pragma once
++
++#include <memory>
++#include <mutex>
++#include <string>
++#include <vector>
++
++#include "../abstractsynthesizer.h"
++#include "../../codecs/audiofiledecoder.h"
++
++namespace muse::audio::synth {
++//! Plays an audio file (MP3/WAV/FLAC) as the sound of an instrument.
++//! The score drives it like any synth, but notes don't set a pitch:
++//!  - while a note sounds, the file plays (at its own time position, it's never re-pitched or stretched)
++//!  - during rests it's silent
++//!  - dynamics (p, mf, f, hairpins...) set the loudness; mf is the file's own volume
++class AudioFileSynth : public AbstractSynthesizer
++{
++public:
++    //! Sound ids look like "scoria-audio:/path/to/song.mp3"
++    static constexpr const char* RESOURCE_PREFIX = "scoria-audio:";
++    static bool isAudioFileResource(const AudioInputParams& params);
++
++    AudioFileSynth(const AudioInputParams& params);
++
++    std::string name() const override;
++    AudioSourceType type() const override;
++    bool isValid() const override;
++
++    void setOutputSpec(const OutputSpec& spec) override;
++
++    const mpe::PlaybackData& playbackData() const override;
++
++    TimePosition playbackPosition() const override;
++    void setPlaybackPosition(const TimePosition& position) override;
++
++    void flushSound() override;
++
++    samples_t process(float* buffer, samples_t samplesPerChannel) override;
++
++protected:
++    void setupSound(const mpe::PlaybackSetupData& setupData) override;
++    void setupEvents(const mpe::PlaybackData& playbackData) override;
++
++private:
++    struct Gate {
++        int64_t startUs = 0;
++        int64_t endUs = 0;
++        float noteLevel = 1.0f; // from the note's own dynamic, used when there is no dynamics curve
++    };
++
++    struct Timeline {
++        std::vector<Gate> gates;               // sorted by start
++        mpe::DynamicAutomationLayers dynamics;
++    };
++
++    void rebuildTimeline(const mpe::PlaybackEventsMap& events, const mpe::DynamicAutomationLayers& dynamics);
++    float targetGainAt(const Timeline& tl, int64_t posUs) const;
++
++    engine::DecodedAudio m_audio;
++    OutputSpec m_outputSpec;
++    mpe::PlaybackData m_playbackData;
++
++    std::shared_ptr<const Timeline> m_timeline;
++    mutable std::mutex m_timelineMutex;
++
++    double m_positionSecs = 0.0;
++    float m_currentGain = 0.0f;
++};
++}
+diff --git a/framework/audio/engine/internal/synthesizers/synthresolver.cpp b/framework/audio/engine/internal/synthesizers/synthresolver.cpp
+index 2263f73e..cb734747 100644
+--- a/framework/audio/engine/internal/synthesizers/synthresolver.cpp
++++ b/framework/audio/engine/internal/synthesizers/synthresolver.cpp
+@@ -22,6 +22,8 @@
+ 
+ #include "synthresolver.h"
+ 
++#include "audiofilesynth/audiofilesynth.h" // Scoria
++
+ #include "audio/common/audiosanitizer.h"
+ 
+ #include "log.h"
+@@ -54,6 +56,13 @@ ISynthesizerPtr SynthResolver::resolveSynth(const TrackId trackId, const AudioIn
+         return nullptr;
+     }
+ 
++    // Scoria: the "Audio Track" instrument's sound is an audio file, not a soundfont preset
++    if (AudioFileSynth::isAudioFileResource(params)) {
++        auto synth = std::make_shared<AudioFileSynth>(params);
++        synth->setOutputSpec(spec);
++        return synth;
++    }
++
+     std::lock_guard lock(m_mutex);
+ 
+     auto search = m_resolvers.find(params.type());
 diff --git a/framework/audio/thirdparty/dr_libs/LICENSE b/framework/audio/thirdparty/dr_libs/LICENSE
 new file mode 100644
 index 00000000..16dfbdfd
